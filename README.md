@@ -16,6 +16,13 @@ Developers will dive into the world of Retrieval Augmented Generation (RAG) with
 - Q&A chatbots: Create intelligent chatbots capable of interacting with stored documents.
 - Vector DB: Explore the role of Vector DB in building scalable RAG systems.
 
+
+### Demo
+
+1. Llama Index Chatbot using Gemini, Streamlit and deployed with App Engine
+2. LangChains Chatbot using Gemini, Streamlit and deployed with App Engine
+
+
 This workshop will provide developers, engineers and researchers with a solid foundation in using Gemini and LangChain for RAG applications.
 
 ### Audience levels
