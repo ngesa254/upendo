@@ -1,0 +1,23 @@
+// {
+//     "/api": {
+//       "target": "https://rag-system-ouzti63wea-uc.a.run.app",
+//       "secure": false,
+//       "changeOrigin": true,
+//       "pathRewrite": {
+//         "^/api": ""
+//       }
+//     }
+//   }
+
+
+{
+    "/api": {
+      "target": "https://rag-system-ouzti63wea-uc.a.run.app",
+      "secure": false,
+      "changeOrigin": true,
+      "pathRewrite": {
+        "^/api": ""
+      },
+      "logLevel": "debug"
+    }
+  }
