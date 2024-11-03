@@ -425,27 +425,97 @@
 #     uvicorn.run(app, host="0.0.0.0", port=port)
 
 
-import os
+# import os
+# from fastapi import FastAPI, HTTPException
+# from pydantic import BaseModel
+# from typing import Optional, Dict, List
+# import logging
+# import google.cloud.logging
+# from datetime import datetime
+# from contextlib import asynccontextmanager
+# from src.document_chat import DocumentChat
+
+# # Setup cloud logging
+# client = google.cloud.logging.Client()
+# client.setup_logging()
+
+# logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger(__name__)
+
+# class HealthCheck(BaseModel):
+#     status: str
+#     version: str = "1.0.0"
+#     timestamp: str = datetime.now().isoformat()
+
+# class QuestionRequest(BaseModel):
+#     question: str
+#     session_id: str
+#     context: Optional[Dict] = None
+
+# class QuestionResponse(BaseModel):
+#     answer: str
+#     sources: List[Dict[str, str]]
+#     session_id: str
+
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     # Initialize DocumentChat
+#     logger.info("Initializing RAG system...")
+#     try:
+#         pdf_path = os.path.join("data", "Africa_Developer_Ecosystem_Report_2021.pdf")
+#         app.state.doc_chat = DocumentChat(pdf_path)
+#         await app.state.doc_chat.initialize_system()
+#         logger.info("RAG system initialized successfully")
+#     except Exception as e:
+#         logger.error(f"Failed to initialize RAG system: {str(e)}")
+#         raise
+#     yield
+
+# app = FastAPI(title="RAG System API", lifespan=lifespan)
+
+# @app.get("/health", response_model=HealthCheck)
+# async def health_check():
+#     logger.info("Health check requested")
+#     return HealthCheck(status="healthy")
+
+# @app.get("/")
+# async def root():
+#     logger.info("Root endpoint accessed")
+#     return {"message": "RAG System API is running", "version": "1.0.0"}
+
+# @app.post("/chat", response_model=QuestionResponse)
+# async def chat(request: QuestionRequest):
+#     try:
+#         logger.info(f"Chat request received for session {request.session_id}")
+#         result = await app.state.doc_chat.get_answer(request.question, request.session_id)
+        
+#         return QuestionResponse(
+#             answer=result["answer"],
+#             sources=result["sources"],
+#             session_id=request.session_id
+#         )
+#     except Exception as e:
+#         logger.error(f"Error processing chat request: {str(e)}")
+#         raise HTTPException(status_code=500, detail=str(e))
+
+# if __name__ == "__main__":
+#     import uvicorn
+#     port = int(os.getenv("PORT", 8080))
+#     uvicorn.run(app, host="0.0.0.0", port=port)
+
+
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, List
 import logging
-import google.cloud.logging
 from datetime import datetime
-from contextlib import asynccontextmanager
 from src.document_chat import DocumentChat
+import os
 
-# Setup cloud logging
-client = google.cloud.logging.Client()
-client.setup_logging()
-
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-class HealthCheck(BaseModel):
-    status: str
-    version: str = "1.0.0"
-    timestamp: str = datetime.now().isoformat()
 
 class QuestionRequest(BaseModel):
     question: str
@@ -457,37 +527,38 @@ class QuestionResponse(BaseModel):
     sources: List[Dict[str, str]]
     session_id: str
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Initialize DocumentChat
-    logger.info("Initializing RAG system...")
+app = FastAPI()
+doc_chat = None
+
+@app.on_event("startup")
+async def startup_event():
+    global doc_chat
+    logger.info("Initializing DocumentChat...")
     try:
         pdf_path = os.path.join("data", "Africa_Developer_Ecosystem_Report_2021.pdf")
-        app.state.doc_chat = DocumentChat(pdf_path)
-        await app.state.doc_chat.initialize_system()
-        logger.info("RAG system initialized successfully")
+        doc_chat = DocumentChat(pdf_path)
+        await doc_chat.initialize_system()
+        logger.info("DocumentChat initialized successfully")
     except Exception as e:
-        logger.error(f"Failed to initialize RAG system: {str(e)}")
+        logger.error(f"Failed to initialize DocumentChat: {str(e)}")
         raise
-    yield
-
-app = FastAPI(title="RAG System API", lifespan=lifespan)
-
-@app.get("/health", response_model=HealthCheck)
-async def health_check():
-    logger.info("Health check requested")
-    return HealthCheck(status="healthy")
 
 @app.get("/")
 async def root():
-    logger.info("Root endpoint accessed")
-    return {"message": "RAG System API is running", "version": "1.0.0"}
+    return {"message": "RAG System API is running"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 @app.post("/chat", response_model=QuestionResponse)
 async def chat(request: QuestionRequest):
+    global doc_chat
     try:
-        logger.info(f"Chat request received for session {request.session_id}")
-        result = await app.state.doc_chat.get_answer(request.question, request.session_id)
+        if not doc_chat:
+            raise HTTPException(status_code=500, detail="System not initialized")
+
+        result = await doc_chat.get_answer(request.question, request.session_id)
         
         return QuestionResponse(
             answer=result["answer"],
@@ -495,7 +566,7 @@ async def chat(request: QuestionRequest):
             session_id=request.session_id
         )
     except Exception as e:
-        logger.error(f"Error processing chat request: {str(e)}")
+        logger.error(f"Error processing request: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
