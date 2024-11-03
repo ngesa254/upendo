@@ -1,0 +1,5 @@
+langchain-community
+langchain-google-vertexai
+pypdf
+chromadb
+langchain-chroma

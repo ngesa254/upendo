@@ -1,0 +1,11 @@
+Welcome to Document Chat! Type 'exit' to end the conversation.
+Ask your questions about the document:
+
+You: What are the key findings about developer demographics?
+Assistant: [Response based on document content]
+
+You: What are the main challenges faced by developers?
+Assistant: [Response based on document content]
+
+You: exit
+Goodbye!
