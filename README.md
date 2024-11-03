@@ -1,6 +1,6 @@
 # Upendo - A gentle Introduction to RAG with Gemini and Langchains
 
-![Upendo Banner](https://raw.githubusercontent.com/ngesa254/upendo/main/public/banner.png)
+![Upendo Banner](angular-fe/public/banner.JPG)
 
 A comprehensive implementation of Retrieval Augmented Generation (RAG) using Gemini API and LangChain, featuring a modern Angular frontend and Python backend.
 
