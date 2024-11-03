@@ -6,8 +6,10 @@ from langchain_google_vertexai import VertexAI, ChatVertexAI, VertexAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores.chroma import Chroma
 from langchain.chains import ConversationalRetrievalChain
-from langchain.memory import ConversationBufferWindowMemory
-from langchain.prompts import PromptTemplate
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.memory import ConversationBufferMemory
+from langchain_community.chat_message_histories import ChatMessageHistory
 
 class DocumentChat:
     def __init__(self, pdf_path: str):
@@ -18,10 +20,10 @@ class DocumentChat:
             max_output_tokens=1024
         )
         self.embeddings = VertexAIEmbeddings(model_name="textembedding-gecko@latest")
-        self.memory = ConversationBufferWindowMemory(
-            k=3,
+        self.memory = ConversationBufferMemory(
             memory_key="chat_history",
-            return_messages=True
+            return_messages=True,
+            output_key="answer"
         )
         self.qa_chain = None
         
@@ -44,31 +46,27 @@ class DocumentChat:
             embedding=self.embeddings
         )
         
-        # Create the condense question prompt
-        condense_prompt = PromptTemplate.from_template("""
-        Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.
-        Chat History:
-        {chat_history}
-        Follow Up Input: {question}
-        Standalone Question:""")
+        # Create chat prompt template
+        condense_prompt = ChatPromptTemplate.from_messages([
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{question}")
+        ])
         
-        # Create the QA prompt
-        qa_prompt = PromptTemplate.from_template("""
-        You are a helpful AI assistant answering questions about a document. 
-        Use the following pieces of context to answer the question at the end.
-        If you don't know the answer, just say that you don't know.
-        
-        Context: {context}
-        
-        Question: {question}
-        
-        Helpful Answer:""")
+        qa_prompt = ChatPromptTemplate.from_messages([
+            ("system", """You are a helpful AI assistant answering questions about a document. 
+            Use the following pieces of context to answer the question at the end.
+            If you don't know the answer, just say that you don't know.
+            
+            Context: {context}"""),
+            ("human", "{question}")
+        ])
         
         # Create the chain with proper configuration
         self.qa_chain = ConversationalRetrievalChain.from_llm(
             llm=self.llm,
             retriever=vectorstore.as_retriever(search_kwargs={"k": 3}),
             memory=self.memory,
+            condense_question_llm=self.llm,
             condense_question_prompt=condense_prompt,
             combine_docs_chain_kwargs={"prompt": qa_prompt},
             return_source_documents=True,
@@ -82,8 +80,10 @@ class DocumentChat:
         formatted_history = ""
         for message in chat_history:
             if hasattr(message, 'content'):
-                role = "Human" if "human" in str(type(message)).lower() else "Assistant"
-                formatted_history += f"{role}: {message.content}\n"
+                if isinstance(message, HumanMessage):
+                    formatted_history += f"Human: {message.content}\n"
+                elif isinstance(message, AIMessage):
+                    formatted_history += f"Assistant: {message.content}\n"
         return formatted_history
         
     def chat(self):
@@ -106,13 +106,9 @@ class DocumentChat:
                 continue
                 
             try:
-                # Get chat history
-                chat_history = self.memory.chat_memory.messages
-                
                 # Get response from chain
-                result = self.qa_chain({
-                    "question": question,
-                    "chat_history": self.format_chat_history(chat_history)
+                result = self.qa_chain.invoke({
+                    "question": question
                 })
                 
                 # Extract answer and sources
