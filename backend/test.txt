@@ -19,3 +19,13 @@ Assistant: [Answer with context from document]
 
 You: Can you provide more details about that?
 Assistant: [Follow-up response with context]
+
+
+Welcome to Document Chat! Type 'exit' to end the conversation.
+Ask your questions about the document:
+
+You: What are the main findings of the report?
+Assistant: [Answer with context from document]
+
+You: Can you provide more details about that?
+Assistant: [Follow-up response with context]
